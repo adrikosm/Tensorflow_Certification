@@ -459,3 +459,106 @@ tf.math.reduce_variance(E)
 # Standard Deviation
 tf.math.reduce_std(E)
 
+"""### Lets find the positional max and min 
+`tf.math.argmax`,`tf.math.argmin`
+"""
+
+# Lets create a new tensor to find argmax and argmin
+tf.random.set_seed(42)
+F = tf.random.uniform(shape=[50])
+F
+
+# Find the positional maximum
+tf.argmax(F)
+
+# Index on our largest value position
+F[tf.argmax(F)]
+
+# Find the max value of F
+tf.reduce_max(F)
+
+# Check for equality
+F[tf.argmax(F)] == tf.reduce_max(F)
+
+# Find the positional minumum
+tf.argmin(F)
+
+F[tf.argmin(F)]
+
+tf.reduce_min(F)
+
+F[tf.argmin(F)] == tf.reduce_min(F)
+
+"""### Squeezing a tensor (removing all single dimension)"""
+
+# Create a tensor to get started
+tf.random.set_seed(42)
+G = tf.constant(tf.random.uniform(shape=[50]),shape=[1,1,1,1,50])
+G
+
+G_squeezed = tf.squeeze(G)
+G_squeezed
+
+"""## One hot encoding tensors"""
+
+# Lets create a list of indices
+some_list = [0,1,2,3]
+
+
+# One hot encode our list of indices
+# One hot encoding with tf requires the depth of the list
+depth = len(some_list)
+
+tf.one_hot(some_list,depth)
+
+# Specifu custom values for one hot encoding
+tf.one_hot(some_list,depth=4,on_value="True",off_value="False")
+
+"""### Squaring , log,square root"""
+
+H = tf.range(1,10)
+H
+
+# Lets square it
+tf.square(H)
+
+# Find the square root( it requires not int type)
+tf.math.sqrt(tf.cast(H,dtype=tf.float16))
+
+# Find the log
+tf.math.log(tf.cast(H,dtype=tf.float16))
+
+"""## Tensors and Numpy
+
+Tensorflow interacts with Numpy arrays
+"""
+
+# Create a tensor directly from numpy array
+J = tf.constant(np.array([3.,7.,10.]))
+J
+
+# Convert our tensor back to a numpy array
+np.array(J),type(np.array(J))
+
+# The default types of each are different
+numpy_J = tf.constant(np.array([3.,7.,10.]))
+tensor_J = tf.constant([3.,7.,10.])
+
+# Check the datatyoes of each tensor
+numpy_J.dtype,tensor_J.dtype
+
+"""### Main difference between tensorflow and numpy
+
+
+---
+Tensorflow can be run on a gpu or tpu while numpy only runs on the cpu which is much slower
+
+
+"""
+
+# Find out whether you are running on cpu or gpu
+tf.config.list_physical_devices()
+
+!nvidia-smi
+
+"""**Note** If you have a cuda-enabled GPU, tensorflow will automatically use it when possible."""
