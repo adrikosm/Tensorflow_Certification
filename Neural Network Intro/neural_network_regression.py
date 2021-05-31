@@ -503,5 +503,317 @@ luckily there are tools to help us!
 
 * **Weights & Biases** - a tool for tracking all kinds of machine learning experiments (Plugs into tensorboard direclty)
 
+## Saving our models
+
+---
+There are 2 main formats we can save our models:
+1. The SaveModel format
+2. The HDF5 format
 """
+
+# Save model using the save model format
+model_2.save("best_model_SavedModel_format")
+
+# Save model using HDF5 format
+model_2.save("best_model_HDF5_format.h5")
+
+"""## Load saved model"""
+
+# Load in the SavedModel format model
+loaded_SavedModel_format = tf.keras.models.load_model("/content/best_model_SavedModel_format")
+loaded_SavedModel_format.summary()
+
+model_2.summary()
+
+print("Loaded Saved Model format prediction: ",loaded_SavedModel_format.predict([61.0]))
+print("Model 2 precitions: ",model_2.predict([61.0]))
+
+SavedModel_preds = loaded_SavedModel_format.predict(X_test)
+
+mae(y_test,SavedModel_preds) == mae(y_test,y_pred_2)
+
+loaded_SavedModel_format.predict(X_test) == model_2.predict(X_test)
+
+# Load in a model using the h5 format
+
+loaded_h5_model = tf.keras.models.load_model("/content/best_model_HDF5_format.h5")
+loaded_h5_model.summary()
+
+loaded_h5_model.predict(X_test) == model_2.predict(X_test)
+
+loaded_h5_preds = loaded_h5_model.predict(X_test)
+mae(y_test,loaded_h5_preds) == mae(y_test,y_pred_2)
+
+"""## A larger DataSet example
+https://www.kaggle.com/mirichoi0218/insurance
+
+We are going to use this kaggle insurance dataset
+"""
+
+# Lets read the insurance dataset raw from github
+insurance = pd.read_csv("https://raw.githubusercontent.com/stedy/Machine-Learning-with-R-datasets/master/insurance.csv")
+insurance.head()
+
+# One hot encode our dataframe so its all numbers
+
+insurance_one_hot = pd.get_dummies(insurance)
+insurance_one_hot
+
+# Lets create X and y values (features and labels)
+X = insurance_one_hot.drop("charges",axis=1)
+y = insurance_one_hot["charges"]
+
+X.plot(x="age",y="bmi",kind="hist",figsize=(10,6))
+plt.xlabel("Age")
+plt.ylabel("Bmi")
+plt.show();
+
+# Create training and test sets
+from sklearn.model_selection import train_test_split
+
+X_train,X_test,y_train,y_test = train_test_split(X,
+                                                 y,
+                                                 test_size=0.2,
+                                                 random_state = 42)
+
+# Lets build a neural network 
+
+# Set up the random seed
+tf.random.set_seed(42)
+
+# 1. Build the model
+insurance_model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(10),
+    tf.keras.layers.Dense(1)
+])
+
+# 2. Compile the model
+insurance_model.compile(loss = tf.keras.losses.mae,
+                        optimizer = tf.keras.optimizers.SGD(),
+                        metrics=["mae"])
+
+# 3. Fit the model
+history_1 = insurance_model.fit(X_train,
+                    y_train,
+                    epochs=100,
+                    verbose=0)
+
+# Check the results of the insurance model on the test data
+insurance_model.evaluate(X_test,y_test)
+
+y_train.median(),y_train.mean()
+
+"""**Right now the model is not performing well at all , lets improve it**"""
+
+# Model 2
+
+# Set up random seed
+tf.random.set_seed(42)
+
+# 1. Build the model
+insurance_model_2 = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(120,activation="linear"),
+    tf.keras.layers.Dense(60,activation="linear"),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(1)
+])
+
+# 2. Compile the model
+insurance_model_2.compile(loss = tf.keras.losses.mae,
+                          optimizer = tf.keras.optimizers.Adam(),
+                          metrics=["mae"])
+
+# 3. Fit the model
+
+history_2 = insurance_model_2.fit(X_train,
+                      y_train,
+                      epochs=200,
+                      verbose=0)
+
+# Evaluate the model
+insurance_model_2.evaluate(X_test,y_test)
+
+# Lets build another model
+
+# Set random seed
+tf.random.set_seed(42)
+
+# 1. Build the model
+insurance_model_3 = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(100),
+    tf.keras.layers.Dense(10),
+    tf.keras.layers.Dense(1)
+])
+
+# 2. Compile the model
+insurance_model_3.compile(loss = tf.keras.losses.mae,
+                          optimizer = tf.keras.optimizers.Adam(),
+                          metrics=["mae"])
+
+# 3. Fit the model
+history_3 = insurance_model_3.fit(X_train,
+                      y_train,
+                      epochs=100,
+                      verbose=0)
+
+# Evaluate the model
+insurance_model_3.evaluate(X_test,y_test)
+
+# Build another model
+
+# Set up random seed
+tf.random.set_seed(42)
+
+# 1. Build the model
+insurance_model_4 = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(100),
+    tf.keras.layers.Dense(10),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(1)
+])
+# 2. Compile the model
+
+insurance_model_4.compile(loss = tf.keras.losses.mae,
+                          optimizer = tf.keras.optimizers.Adam(learning_rate=0.2),
+                          metrics=["mae"])
+
+# 3. Fit the model
+
+history_4 = insurance_model_4.fit(X_train,
+                      y_train,
+                      epochs=200,
+                      verbose=0)
+
+insurance_model_4.evaluate(X_test,y_test)
+
+# Plot history ( also known as a loss curve or a training curve)
+def plot_history(history):
+  pd.DataFrame(history.history).plot(figsize=(10,6))
+  plt.ylabel("loss")
+  plt.xlabel("epochs")
+  plt.show()
+
+plot_history(history_1)
+
+plot_history(history_2)
+
+plot_history(history_4)
+
+plot_history(history_4)
+
+mae(y_test,insurance_model.predict(X_test))
+
+tf.cast(y_test.shape,dtype=tf.float32),tf.cast(X_train.shape,dtype=tf.float32)
+
+# Insurance Model 1
+mae_1 = mae(y_test,insurance_model.predict(X_test))
+mse_1 = mse(y_test,insurance_model.predict(X_test))
+# Insurance Model 2
+mae_2 = mae(y_test,insurance_model_2.predict(X_test))
+mse_2 = mse(y_test,insurance_model_2.predict(X_test))
+# Insurance Model 3
+mae_3 = mae(y_test,insurance_model_3.predict(X_test))
+mse_3 = mse(y_test,insurance_model_3.predict(X_test))
+# Insurance Model 4
+mae_4 = mae(y_test,insurance_model_4.predict(X_test))
+mse_4 = mse(y_test,insurance_model_4.predict(X_test))
+
+# Lets get the model results and put them into a dataframe
+model_results = [["model_1",mae_1.numpy(),mse_1.numpy()],
+                 ["model_2",mae_2.numpy(),mse_2.numpy()],
+                 ["model_3",mae_3.numpy(),mse_3.numpy()],
+                 ["model_4",mae_4.numpy(),mse_4.numpy()]]
+model_results
+
+# DataFrame of results
+model_results_df = pd.DataFrame(model_results,columns=["model","mae","mse"])
+model_results_df
+
+"""### Lets plot the results so we can better see"""
+
+model_results_df.plot(x="model",y="mae",kind="bar",figsize=(10,6))
+plt.xticks(rotation="horizontal");
+
+model_results_df.plot(x="model",y="mse",kind="bar",figsize=(10,6))
+plt.xticks(rotation="horizontal");
+
+"""## Preprocessing data (normalization and standardization)
+
+
+---
+
+We got 2 scaling types (neural networks tend to prefer normalization):
+
+* **Scale** (also referred to as normalization) - Converts all values to betweeen 0 and 1 whilist preseving the original distribution
+* **Standardization** - Removes the mean and divides each value by the standard deviation
+
+to prepare our data , we can use a few classes from scikit-learn
+"""
+
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import MinMaxScaler,OneHotEncoder
+from sklearn.model_selection import train_test_split
+
+# Create a column transformer
+ct = make_column_transformer(
+    (MinMaxScaler(),["age","bmi","children"]), # Turns all values in these columns between 0 and 1
+    (OneHotEncoder(handle_unknown="ignore"),["sex","smoker","region"])
+)
+# Create X and y values
+X = insurance.drop("charges",axis=1)
+y = insurance["charges"]
+
+# Build our train and test sets
+X_train,X_test,y_train,y_test = train_test_split(X,
+                                                 y,
+                                                 test_size=0.2,
+                                                 random_state=42)
+
+# Fit the column transformer to our training data
+ct.fit(X_train)
+
+# Transform training and test data with normalization (MinMaxScaler) and onehot
+X_train_normal = ct.transform(X_train)
+X_test_normal = ct.transform(X_test)
+
+# What does our data look like now
+X_train.loc[0]
+
+X_train_normal
+
+X_train.shape,X_train_normal.shape
+
+"""Our data has been normalized and one hot encoded . Now lets build a neural network model on it and fit it """
+
+# Build a neural network model to fit on our normalized data
+
+# Set up random seed
+tf.random.set_seed(42)
+
+# 1. Build model
+insurance_model = tf.keras.models.Sequential([
+    tf.keras.layers.Dense(120,activation="relu"),
+    tf.keras.layers.Dense(60),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(1)
+])
+
+# 2. Compile the model
+insurance_model.compile(loss= tf.keras.losses.mae,
+                        optimizer=tf.keras.optimizers.Adam(),
+                        metrics=["mae"])
+
+# Set up a simple callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="loss",patience=20)
+
+# 3. Fit the model on the normalized data
+history = insurance_model.fit(X_train_normal,
+                              y_train,
+                              epochs = 1000,
+                              callbacks=[callback],
+                              verbose=0)
+
+insurance_model.evaluate(X_test_normal,y_test)
+
+plot_history(history)
 
