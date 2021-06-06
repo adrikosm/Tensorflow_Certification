@@ -175,14 +175,14 @@ def model_builder(hp):
   model = tf.keras.Sequential()
   hp_units = hp.Int('units',min_value=32,max_value=512,step=16)
   
-  model.add(tf.keras.layers.Dense(units=hp_units))
+  model.add(tf.keras.layers.Dense(units=hp_units,activation="relu"))
   model.add(tf.keras.layers.Dense(256))
   model.add(tf.keras.layers.Dense(126))
   model.add(tf.keras.layers.Dense(64))
   model.add(tf.keras.layers.Flatten())
   model.add(tf.keras.layers.Dense(1))
 
-  hp_learning_rate = hp.Choice('learning_rate',values=[1e-2, 1e-3, 1e-4])
+  hp_learning_rate = hp.Choice('learning_rate',values=[1e-2, 1e-3, 1e-4,1e-5])
 
   model.compile(loss = tf.keras.losses.mae,
                   optimizer = tf.keras.optimizers.Adam(learning_rate=hp_learning_rate),
@@ -196,7 +196,7 @@ tuner = kt.Hyperband(model_builder,
                      factor = 3)
 
 # Set up callback
-callback = tf.keras.callbacks.EarlyStopping(monitor="mae",patience=20)
+callback = tf.keras.callbacks.EarlyStopping(monitor="mae",patience=10)
 
 # Set up tuner search
 tuner.search(x_train,y_train,epochs = 1000,callbacks=[callback])
@@ -248,7 +248,7 @@ print("Mean squared error: ",mse_4)
 model_results = [["model_1",mae_1.numpy(),mse_1.numpy()],
                  ["model_2",mae_2.numpy(),mse_2.numpy()],
                  ["model_3",mae_3.numpy(),mse_3.numpy()],
-                 ["model_4",mae_4.numpy(),mse_4.numpy()]]
+                 ["hyper_model_4",mae_4.numpy(),mse_4.numpy()]]
 model_results
 
 # Now Lets put the model results into a dataframe
