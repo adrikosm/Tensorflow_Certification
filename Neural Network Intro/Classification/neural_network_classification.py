@@ -325,3 +325,26 @@ plot_decision_boundary(model_7,X,y)
 
 plot_history(history_7)
 
+# Make a sigmoid function
+def sigmoid(x):
+  return 1 / (1 + tf.exp(-x))
+
+# Make a relu function
+def relu(x):
+  return tf.maximum(0,x)
+
+# Create a simple tensor
+A = tf.cast(tf.range(-10,10),tf.float32)
+
+# Now lets plot our sigmoid on our tensor
+plt.figure(figsize=(10,6))
+plt.plot(sigmoid(A));
+
+# Plot the relu of our tensor
+plt.figure(figsize=(10,6))
+plt.plot(relu(A));
+
+# Plot the linear activation
+plt.figure(figsize=(10,6))
+plt.plot(tf.keras.activations.linear(A));
+
