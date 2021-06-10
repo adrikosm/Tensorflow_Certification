@@ -551,7 +551,7 @@ sns.heatmap(cf_percent,annot=True,fmt='.2%',cmap='Blues');
 import itertools
 
 # Create a function for the confugion matrix
-def plot_conf_matrix(y_test,y_preds,classes=False):
+def plot_conf_matrix(y_test,y_preds,classes=False,figsize=(15,15),textsize=15):
   """
   Takes as input the y_test and the y_preds
   and then plots a confusion matrix
@@ -561,13 +561,11 @@ def plot_conf_matrix(y_test,y_preds,classes=False):
   cm_norm = cm.astype("float") / cm.sum(axis=1)[:,np.newaxis]
   n_classes = cm.shape[0]
 
-  fig,ax = plt.subplots(figsize=(10,8))
+  fig,ax = plt.subplots(figsize=(figsize))
   # Create a matrix plot 
   cax = ax.matshow(cm,cmap=plt.cm.Blues)
   fig.colorbar(cax)
 
-  # Create multiple classes if needed
-  classes = False
   if classes:
     labels = classes
   else:
@@ -598,7 +596,7 @@ def plot_conf_matrix(y_test,y_preds,classes=False):
   for i , j in itertools.product(range(cm.shape[0]),range(cm.shape[1])):
     plt.text(j,i,f"{cm[i,j]} ({cm_norm[i,j]*100:.1f}%)",horizontalalignment="center",
              color="white" if cm[i,j] > threshold else "black",
-             size=15)
+             size=textsize)
   plt.show()
 
 plot_conf_matrix(y_test,y_preds)
@@ -740,4 +738,175 @@ plot_history(history_12)
 
 plot_history(history_11)
 plot_history(history_12)
+
+"""## Lets find out the ideal learning rate"""
+
+# Build a testing model
+
+# Set seed
+tf.random.set_seed(42)
+
+# Build model
+model_13 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(10,activation="softmax")
+])
+
+# COmpile the model
+model_13.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(),
+                 metrics=["accuracy"])
+
+# Set up learning rate scheduler
+lr_scheduler = tf.keras.callbacks.LearningRateScheduler(lambda epoch: 1e-3 * 10 **(epoch/20))
+
+
+# Fit the model
+history_13 = model_13.fit(train_data_norm,
+                          train_labels,
+                          epochs=40,
+                          validation_data=(test_data_norm,test_labels),
+                          callbacks = [lr_scheduler])
+
+# Time to plot the learning rate in order to find the best
+lrs = 1e-3 * (10 ** (tf.range(40)/20))
+
+plt.semilogx(lrs,history_13.history["loss"])
+plt.xlabel("Learning rate")
+plt.ylabel("Loss");
+
+# We can see that the perfect learning rate is 10 ** -3 
+# So lets build another model with the perfect learning rate
+
+# Set up random seed
+tf.random.set_seed(42)
+
+
+# Build the model
+model_14 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(10,activation="softmax")
+])
+
+# Compile the model
+model_14.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001),
+                 metrics=["accuracy"])
+
+# Fit the model
+history_14 = model_14.fit(train_data_norm,
+                          train_labels,
+                          epochs=20,
+                          validation_data=(test_data_norm,test_labels))
+
+"""## Evaluating our multi-class classification model
+
+---
+
+To evaluate our multi-class classification model we could:
+* evaluate its performance using other classification metrics 
+* Assses some of its predictions through visualizasions
+* Improve its results by training it for longer or changing the architecture
+* Save and export it for use in an application
+"""
+
+# Create a confusion matrix
+# Make some predictions with our model
+y_probs = model_14.predict(test_data_norm) # Prediction probabilities
+y_probs[:3]
+
+# Convert all of the prediction probabilities into integers
+y_preds = y_probs.argmax(axis=1)
+y_preds[:10]
+
+class_names
+
+plot_conf_matrix(y_test=test_labels,
+                 y_preds = y_preds,
+                 classes = class_names,
+                 figsize = (15,15),
+                 textsize = 10)
+
+"""### Lets make a function to:
+* Plot random image
+* Make prediction on said image
+* Label the plot with the truth label and predicted label
+"""
+
+def plot_random_image(model,images,true_labels,classes):
+  """
+  Picks a random image plots it and labels it with a prediction and the truth label
+  """
+  # Set up random integer 
+  i = random.randint(0,len(images))
+
+  # Create predictions and targets
+  target_image = images[i]
+  pred_probs = model.predict(target_image.reshape(1,28,28))
+  pred_label = classes[pred_probs.argmax()]
+  true_label = classes[true_labels[i]]
+
+  # Plot the image
+  plt.imshow(target_image,cmap=plt.cm.binary)
+
+  # Change the color of the titles depending on if the prediction is right or wrong
+  if pred_label == true_label:
+    color = "green"
+  else:
+    color = "red"
+  
+  # Add xlabel information (prediction/true_label)
+  plt.xlabel("Pred: {} {:2.0f}% (True: {})".format(pred_label,
+                                                   100*tf.reduce_max(pred_probs),
+                                                   true_label),
+             color=color)
+
+# Lets chech out a random image and the prediciton
+
+plot_random_image(model = model_14,
+                  images = test_data_norm, # Always make predictions on the same kind of data your model was trained for
+                  true_labels = test_labels,
+                  classes = class_names)
+
+plt.figure(figsize=(13,13))
+for i in range(6):
+  ax = plt.subplot(3,3,i+1)
+  plot_random_image(model = model_14,
+                  images = test_data_norm,
+                  true_labels = test_labels,
+                  classes = class_names)
+
+"""## What patterns our model is learning"""
+
+# Find the layers of our most recent model
+model_14.layers
+
+# Extract a particular layer
+model_14.layers[1]
+
+# Get the patterns of a layer in our network
+weights , biases = model_14.layers[1].get_weights()
+
+# Shapes
+weights, weights.shape
+
+biases,biases.shape
+
+model_14.summary()
+
+"""Every neuron has a bias vector.Each of these is paired with a weights matrix.
+
+The bias vector gets initialized as zeros
+
+The bias vector dictates how much the patterns within the corresponding weight matrix should influence the next layer
+"""
+
+# Lets check out another way of viewing our deep learning models
+from tensorflow.keras.utils import plot_model
+# See the inputs and outputs of each layer
+plot_model(model_14,show_shapes=True)
 
