@@ -33,6 +33,9 @@ from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import MinMaxScaler,OneHotEncoder
 from sklearn.model_selection import train_test_split
 
+# Make by default all fig sized 10 ,6
+plt.rcParams["figure.figsize"] = (10,6)
+
 """## Create some data view it and fit it"""
 
 from sklearn.datasets import make_circles
@@ -207,10 +210,9 @@ def plot_decision_boundary(model, X, y):
   plt.ylim(yy.min(), yy.max())
 
 def plot_history(history):
-  pd.DataFrame(history.history).plot(figsize=(10,6))
+  pd.DataFrame(history.history).plot()
   plt.ylabel("loss")
   plt.xlabel("epochs")
-  plt.show()
 
 plot_decision_boundary(model_2,X,y)
 
@@ -347,4 +349,395 @@ plt.plot(relu(A));
 # Plot the linear activation
 plt.figure(figsize=(10,6))
 plt.plot(tf.keras.activations.linear(A));
+
+"""## Evaluating and improving our classification"""
+
+# Lets split into train and test sets
+
+X_train,y_train = X[:800],y[:800]
+X_test,y_test = X[800:],y[800:]
+
+X_train.shape,y_train.shape,X_test.shape,y_test.shape
+
+"""### Now lets properly create a model which will be fit on the training data and evaluate on the testing data"""
+
+# Set up random seed
+tf.random.set_seed(42)
+
+# 1. Create the model
+model_8 = tf.keras.Sequential([
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(1,activation="sigmoid")
+])
+
+# 2. Compile the model
+model_8.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(learning_rate=0.01),
+                metrics=["accuracy"])
+
+# Setup callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience=5)
+
+# 3. Fit the model
+history_8 = model_8.fit(X_train,y_train,epochs=200,callbacks=[callback],verbose=0)
+
+# 4. Evaluate the model
+model_8.evaluate(X_test,y_test)
+
+# Plot the decision boundaries for the training and test sets
+plt.figure(figsize=(18,8))
+plt.subplot(1,2,1)
+plt.title("Test")
+plot_decision_boundary(model_8,X_test,y_test)
+plt.subplot(1,2,2)
+plt.title("Train")
+plot_decision_boundary(model_8,X_train,y_train);
+
+plot_history(history_8)
+
+model_8.summary()
+
+"""## Finding the best learning rate
+
+to find the ideal learning rate we are going to use this steps:
+* **A learning rate callback**
+* **Another model**
+* **A modified loss curve plot**
+"""
+
+# Build new model
+
+# Set up random seed
+tf.random.set_seed(42)
+
+
+# 1. Build the model
+model_9 = tf.keras.Sequential([
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(1,activation="sigmoid")
+])
+
+
+# 2. Compile the model
+model_9.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics=["accuracy"])
+
+# Setup up callbacks
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience=10)
+lr_scheduler = tf.keras.callbacks.LearningRateScheduler(lambda epoch: 1e-4 * 10**(epoch/20))
+
+# 3. Fit the model
+history_9 = model_9.fit(X_train,
+                        y_train,
+                        epochs=100,
+                        callbacks = [callback,lr_scheduler],
+                        verbose=0)
+
+# 4. Evaluate the model
+model_9.evaluate(X_test,y_test)
+
+plot_history(history_9)
+
+tot_epochs = len(history_9.history["loss"])
+tot_epochs
+
+# Plot the decision boundaries for the training and test sets
+plt.figure(figsize=(18,8))
+plt.subplot(1,2,1)
+plt.title("Test")
+plot_decision_boundary(model_9,X_test,y_test)
+plt.subplot(1,2,2)
+plt.title("Train")
+plot_decision_boundary(model_9,X_train,y_train);
+
+# Lets plot the learning rate versus the loss
+lrs = 1e-4 * (10 ** (tf.range(tot_epochs)/20))
+lrs
+
+plt.semilogx(lrs,history_9.history["loss"])
+
+"""In order to get the best learning rate we should look for place that it still continues to decline while not spiking. So we can see from the plot that the ideal range is between 10 ** -2 and a few steps ahead"""
+
+# So now lets build a model with the perfect learning rate which is 0.02
+
+# Setup random seed
+tf.random.set_seed(42)
+
+# Build the model 
+
+model_10 = tf.keras.Sequential([
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(1,activation="sigmoid")
+])
+
+# Compile the model with ideal lr
+
+model_10.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(learning_rate=0.02),
+                 metrics=["accuracy"])
+
+
+# Set up callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience=5)
+
+
+# Fit the model
+history_10 = model_10.fit(X_train,
+                          y_train,
+                          epochs=100,
+                          callbacks = [callback],
+                          verbose=0)
+
+# Evaluate the model
+model_10.evaluate(X_test,y_test)
+
+plot_history(history_10)
+
+# Plot the decision boundaries for the training and test sets
+plt.figure(figsize=(18,8))
+plt.subplot(1,2,1)
+plt.title("Test")
+plot_decision_boundary(model_10,X_test,y_test)
+plt.subplot(1,2,2)
+plt.title("Train")
+plot_decision_boundary(model_10,X_train,y_train);
+
+"""## More classification evaluation methods
+
+Besides visualizing our models results , we can also use other classification evaluation methods such as:
+* **Accuracy**
+* **Precision** - Leads to less false positives
+* **Recall** - leads to less false negatives
+* **F1-Score** - combination between precision and recall
+* **Confusion matrix**
+* **Classification report** - from scikit-learn
+"""
+
+# Check the accuracy of our model
+loss , accuracy = model_10.evaluate(X_test,y_test)
+
+print(f"Model loss on the test sets : {loss}")
+print(f"Model accuracy on the test set: {(accuracy*100):.2f}%")
+
+# Now lets see a confusion matrix
+from sklearn.metrics import confusion_matrix
+
+# Make predictions
+y_preds = model_10.predict(X_test)
+
+
+# We need to conver our y_preds into binary format 
+y_preds = tf.round(y_preds)
+
+# Create confusion matrix
+cf_matrix = confusion_matrix(y_test,y_preds)
+cf_matrix
+
+# Plot the confusion matrix
+import seaborn as sns
+sns.heatmap(cf_matrix,annot=True,fmt='.2f');
+
+cf_percent = cf_matrix / np.sum(cf_matrix)
+
+sns.heatmap(cf_percent,annot=True,fmt='.2%',cmap='Blues');
+
+# Lets make a confusion matrix from scrathc
+import itertools
+
+# Create a function for the confugion matrix
+def plot_conf_matrix(y_test,y_preds,classes=False):
+  """
+  Takes as input the y_test and the y_preds
+  and then plots a confusion matrix
+  """
+  # Create the confusion matrix
+  cm = confusion_matrix(y_test,tf.round(y_preds))
+  cm_norm = cm.astype("float") / cm.sum(axis=1)[:,np.newaxis]
+  n_classes = cm.shape[0]
+
+  fig,ax = plt.subplots(figsize=(10,8))
+  # Create a matrix plot 
+  cax = ax.matshow(cm,cmap=plt.cm.Blues)
+  fig.colorbar(cax)
+
+  # Create multiple classes if needed
+  classes = False
+  if classes:
+    labels = classes
+  else:
+    labels = np.arange(cm.shape[0])
+  
+  # Label the axes
+  ax.set(title="Confusion matrix",
+         xlabel="Predicted Label",
+         ylabel="True label",
+         xticks=np.arange(n_classes),
+         yticks=np.arange(n_classes),
+         xticklabels=labels,
+         yticklabels=labels)
+  
+  # Set x-axis labels to bottom
+  ax.xaxis.set_label_position("bottom")
+  ax.xaxis.tick_bottom()
+
+  # Adjust label size
+  ax.yaxis.label.set_size(20)
+  ax.xaxis.label.set_size(20)
+  ax.title.set_size(20)
+
+  # Set threshold for different colors
+  threshold = (cm.max() + cm.min()) / 2.
+
+  # Plot the text on each cell
+  for i , j in itertools.product(range(cm.shape[0]),range(cm.shape[1])):
+    plt.text(j,i,f"{cm[i,j]} ({cm_norm[i,j]*100:.1f}%)",horizontalalignment="center",
+             color="white" if cm[i,j] > threshold else "black",
+             size=15)
+  plt.show()
+
+plot_conf_matrix(y_test,y_preds)
+
+"""## Working with larger examples (multiclass classification)
+
+When we have more than two classes to identify it is considered as **multi-class classification**
+
+---
+We are going to build a neural network to classifiy images of different items of clothing.
+* We will use fashion mnist dataset
+
+"""
+
+from tensorflow.keras.datasets import fashion_mnist
+
+
+# The data has already been sorted into training and test sets
+(train_data,train_labels) , (test_data,test_labels) = fashion_mnist.load_data()
+
+print(f"First training sample:\n {train_data[0]}\n")
+print(f"Training label:\n {train_labels[0]}\n")
+
+# Check the shape of the first example
+train_data[0].shape,train_labels[0].shape
+
+# Plot a single sample
+plt.imshow(train_data[0]);
+
+# Check out samples label
+train_labels[0]
+
+# Create a small list so we can index on our training index so we can understand them
+class_names = ["T-shirt/Top","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneakers","Bag","Ankle boot"]
+
+
+len(class_names)
+
+# Plot an example image and its label
+index = 9
+plt.imshow(train_data[index],cmap=plt.cm.binary)
+plt.title(class_names[train_labels[index]]);
+
+# Plot multiple random images 
+import random
+plt.figure(figsize=(10,10))
+for i in range(4):
+  ax = plt.subplot(2,2,i+1)
+  rand_index = random.choice(range(len(train_data)))
+  plt.imshow(train_data[rand_index],cmap=plt.cm.binary)
+  plt.title(class_names[train_labels[rand_index]])
+  plt.axis(False)
+
+"""## Build a multi-class classification model
+
+
+---
+For our multi-class classification we are going to have to tweak:
+* Input shape = 28x28 (the shape of 1 image)
+* Output shape = 10 (1 per class of clothing)
+* Loss function = tf.keras.losses.CategoricalCrossentropy()
+* Output layer activation = softmax not sigmoid
+
+"""
+
+# Time to build the model
+
+# Set up random seed
+tf.random.set_seed(42)
+input_shape=(28,28)
+# Build the model
+model_11 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=input_shape),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(10,activation="softmax")
+])
+
+# Compile the model
+model_11.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(),
+                 metrics=["accuracy"])
+
+# Set up callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="acuracy",patience=5)
+
+# Fit the model
+history_11 = model_11.fit(train_data,
+                          train_labels,
+                          epochs=10,
+                          callbacks = [callback].
+                          validation_data = (test_data,test_labels),
+                          verbose=1)
+
+model_11.summary()
+
+plot_history(history_11)
+
+"""Neural Networks prefer data to be scaled or normalized, this mean they have to have numbers in between 0 and 1"""
+
+# We can get our training and testing data between 0 and 1 by dividing by the maximum
+
+
+train_data_norm = train_data / 255.0
+test_data_norm = test_data / 255.0
+
+# Check the min and max values of the scaled training data
+train_data_norm.min(),train_data_norm.max()
+
+# Time to remake our model but this time with the normalized values 
+
+
+# Set up random seed
+tf.random.set_seed(42)
+
+
+# Build model
+model_12 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape= (28,28)),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(4,activation="relu"),
+    tf.keras.layers.Dense(10,activation="softmax")
+])
+
+# Compile model
+model_12.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(),
+                 metrics=["accuracy"])
+
+# Fit the model
+history_12 = model_12.fit(train_data_norm,
+                          train_labels,
+                          epochs=10,
+                          validation_data=(test_data_norm,test_labels))
+
+plot_history(history_12)
+
+"""Lets compare our non-normalized data loss curves to the normalized data """
+
+plot_history(history_11)
+plot_history(history_12)
 
