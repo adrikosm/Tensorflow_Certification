@@ -687,7 +687,7 @@ callback = tf.keras.callbacks.EarlyStopping(monitor="acuracy",patience=5)
 history_11 = model_11.fit(train_data,
                           train_labels,
                           epochs=10,
-                          callbacks = [callback].
+                          callbacks = [callback],
                           validation_data = (test_data,test_labels),
                           verbose=1)
 
@@ -730,7 +730,8 @@ model_12.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
 history_12 = model_12.fit(train_data_norm,
                           train_labels,
                           epochs=10,
-                          validation_data=(test_data_norm,test_labels))
+                          validation_data=(test_data_norm,test_labels),
+                          verbose=0)
 
 plot_history(history_12)
 
@@ -768,7 +769,8 @@ history_13 = model_13.fit(train_data_norm,
                           train_labels,
                           epochs=40,
                           validation_data=(test_data_norm,test_labels),
-                          callbacks = [lr_scheduler])
+                          callbacks = [lr_scheduler],
+                          verbose=0)
 
 # Time to plot the learning rate in order to find the best
 lrs = 1e-3 * (10 ** (tf.range(40)/20))
@@ -801,7 +803,8 @@ model_14.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
 history_14 = model_14.fit(train_data_norm,
                           train_labels,
                           epochs=20,
-                          validation_data=(test_data_norm,test_labels))
+                          validation_data=(test_data_norm,test_labels),
+                          verbose=0)
 
 """## Evaluating our multi-class classification model
 
@@ -909,4 +912,89 @@ The bias vector dictates how much the patterns within the corresponding weight m
 from tensorflow.keras.utils import plot_model
 # See the inputs and outputs of each layer
 plot_model(model_14,show_shapes=True)
+
+"""## Lets try to make a model with over 88% accuracy"""
+
+# Build another model ,add hidden layers, train it for longer ,setup callback
+# Set up random seed
+tf.random.set_seed(42)
+
+# Build the model
+model_15 = tf.keras.Sequential([
+    tf.keras.layers.Flatten(input_shape=(28,28)),
+    tf.keras.layers.Dense(256,activation="relu"),
+    tf.keras.layers.Dense(10,activation="softmax")
+])
+
+# Compile the model
+model_15.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(),
+                 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001),
+                 metrics=["accuracy"])
+
+# Set up callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience=5)
+
+# Fit the model
+history_15 = model_15.fit(train_data_norm,
+                          train_labels,
+                          epochs= 200,
+                          validation_data=(test_data_norm,test_labels),
+                          callbacks=[callback],
+                          verbose=0)
+
+loss_11 , accuracy_11 = model_11.evaluate(test_data,test_labels)
+loss_13 , accuracy_13 = model_13.evaluate(test_data_norm,test_labels)
+loss_14 , accuracy_14 = model_14.evaluate(test_data_norm,test_labels)
+loss_15 , accuracy_15 = model_15.evaluate(test_data_norm,test_labels)
+
+model_results = [["model 11",loss_11,accuracy_11],
+                 ["model 13",loss_13,accuracy_13],
+                 ["model 14",loss_14,accuracy_14],
+                 ["model 15",loss_15,accuracy_15]]
+model_results
+
+model_results_df = pd.DataFrame(model_results,columns=["model","loss","accuracy"])
+model_results_df
+
+model_results_df.plot(x="model",y="loss",kind="bar")
+plt.xticks(rotation= "horizontal")
+plt.title("Lower is better");
+
+model_results_df.plot(x="model",y="accuracy",kind="bar")
+plt.xticks(rotation="horizontal")
+plt.title("Higher is better");
+
+# Create a confusion matrix
+# Make some predictions with our model
+y_probs = model_15.predict(test_data_norm) # Prediction probabilities
+# Convert all of the prediction probabilities into integers
+y_preds = y_probs.argmax(axis=1)
+
+# Finnaly plot a conf matrix
+plot_conf_matrix(y_test=test_labels,
+                 y_preds = y_preds,
+                 classes = class_names,
+                 figsize = (15,15),
+                 textsize = 10)
+
+plt.figure(figsize=(13,13))
+for i in range(6):
+  ax = plt.subplot(3,3,i+1)
+  plot_random_image(model = model_15,
+                  images = test_data_norm,
+                  true_labels = test_labels,
+                  classes = class_names)
+
+# Plot some images
+num_rows = 4
+num_cols = 3
+num_images = num_rows * num_cols
+plt.figure(figsize=(2*3*num_cols,4*num_rows))
+
+for i in range(num_images):
+  plt.subplot(num_rows,2*num_cols,2*i+1)
+  plot_random_image(model = model_15,
+                  images = test_data_norm,
+                  true_labels = test_labels,
+                  classes = class_names)
 
