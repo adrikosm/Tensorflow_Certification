@@ -33,3 +33,57 @@ zip_ref.close()
 
 !ls pizza_steak/train/
 
+"""## Visualizing the Data"""
+
+import os 
+
+# Lets traverse through pizza steak directory and list number of files
+for dirpath,dirnames,filenames in os.walk("pizza_steak"):
+  #print(f" There are {len(dirnames)} Directories and {len(filenames)} images in {dirpath}.")
+  if len(dirnames) < 1:
+    print(f"There are {len(filenames)} images in {dirpath}.")
+  elif  len(filenames) <= 1:
+    print(f"There are {len(dirnames)} Directories in {dirpath}.")
+
+# Another way to find out how many images are in a file
+num_steak_images_train = len(os.listdir("pizza_steak/train/steak"))
+
+num_steak_images_train
+
+num_pizza_images_test = len(os.listdir("pizza_steak/test/pizza"))
+num_pizza_images_test
+
+# Lets get the classnames 
+import pathlib
+import numpy as np
+data_dir = pathlib.Path("pizza_steak/train")
+class_names = np.array(sorted(item.name for item in data_dir.glob("*")))
+
+class_names = class_names[1:]
+class_names
+
+"""### Visualize our images"""
+
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import random
+
+def view_random_image(target_dir,target_class):
+  """
+  INFO:Gets a random image from a selected directory and class
+  """
+  target_folder = target_dir + "/" +  target_class
+  random_image = random.sample(os.listdir(target_folder),1)
+  # Plot out the image
+  img = mpimg.imread(target_folder + "/" + random_image[0])
+  plt.imshow(img)
+  plt.title(target_class)
+  plt.axis("off")
+  print(f" Image shape: {img.shape}") # Shows the shape of the image
+
+ return img
+
+# View a random image
+img = view_random_image(target_dir = "pizza_steak/train",
+                        target_class = "pizza")
+
