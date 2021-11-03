@@ -287,7 +287,7 @@ from tensorflow.keras import Sequential
 
 # Create the baseline model
 
-baseline_model = Sequential([
+baseline_model = Sequential([        
       Conv2D(filters = 10,
              kernel_size = 3,
              strides = 1,
@@ -299,4 +299,191 @@ baseline_model = Sequential([
       Flatten(),
       Dense(1,activation="sigmoid")         # Output layer
 ])
+
+"""## 4. Fit the model"""
+
+# Compile the baseline model
+baseline_model.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics = ["accuracy"])
+
+# Fit the baseline model
+history_4 = baseline_model.fit(train_data,
+                        epochs = 5,
+                        steps_per_epoch = len(train_data),
+                        validation_data = test_data,
+                        validation_steps =  len(test_data))
+
+baseline_model.evaluate(test_data)
+
+baseline_model.summary()
+
+"""## 5. Evaluate the model
+Lets try to evaluate our base line model
+"""
+
+# Plot the training curves 
+import pandas as pd
+pd.DataFrame(history_4.history).plot(figsize=(10,7));
+
+# Lets try to plot the validation and training curves separately
+def plot_loss_curves(history):
+  """
+  Returns separate loss curves for training and validation methods
+  """
+  loss = history.history["loss"]
+  val_loss = history.history["val_loss"]
+
+  accuracy = history.history["accuracy"]
+  val_accuracy = history.history["val_accuracy"]
+
+  epochs = range(len(history.history["loss"]))
+
+  # Plot loss
+  plt.plot(epochs,loss,label = "training loss")
+  plt.plot(epochs,val_loss,label = "validation loss")
+  plt.title("loss")
+  plt.xlabel("epochs")
+  plt.legend()
+  # Plot accuracy
+  plt.figure()
+  plt.plot(epochs,accuracy,label = "training accuracy")
+  plt.plot(epochs,val_accuracy,label = "validation accuracy")
+  plt.title("accuracy")
+  plt.xlabel("epochs")
+  plt.legend()
+
+# Check out the loss and accuracy of model 4
+plot_loss_curves(history_4)
+
+"""## 6. Adjust different hyperparameters and improve our model 
+
+Fitting a machine learning model comes in 3 steps:
+0. Create the baseline model
+1. Beat the baseline by overfitting a larger model
+2. Reduce overfitting
+
+Ways to induce overfitting:
+* Increase the number of conv layers
+* Increase the number of conv filterz
+* Add another dense layer to the output of our flattened layer
+
+Ways to reduce overfitting:
+* Add data augmentation
+* Add regularization layers(such as MaxPool)
+* Add more data
+"""
+
+# Create a new model
+model_5 = Sequential([
+    Conv2D(10,3,activation="relu",input_shape=(224,224,3)),
+    MaxPool2D(pool_size = 2),
+    Conv2D(10,3,activation="relu"),
+    MaxPool2D(),
+    Conv2D(10,3,activation="relu"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(1,activation="sigmoid")
+])
+
+# Compile te model
+model_5.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics = ["accuracy"])
+
+# Fit the model
+history_5 = model_5.fit(train_data,
+                        epochs = 5,
+                        steps_per_epoch = len(train_data),
+                        validation_data = test_data,
+                        validation_steps = len(test_data))
+
+plot_loss_curves(history_5)
+
+model_5.summary()
+
+"""## Lets try and do some data augmentatio"""
+
+# Create ImageDataGenerator training instance
+train_datagen_augmented = ImageDataGenerator(rescale= 1/255.,
+                                             rotation_range = 0.2,
+                                             shear_range = 0.2,
+                                             zoom_range = 0.2,
+                                             width_shift_range = 0.2,
+                                             height_shift_range = 0.2,
+                                             horizontal_flip = True)
+# Create ImageDataGenerator without data augmentation
+train_datagen = ImageDataGenerator(rescale = 1/255.)
+
+# Create ImageDataGenerator without data augmentation for test dataset
+test_datagen = ImageDataGenerator(rescale = 1/255.)
+
+# Import data and augment it from training directory
+print("Augmented training data:")
+train_data_augmented = train_datagen_augmented.flow_from_directory(train_dir,
+                                                                   target_size = (224,224),
+                                                                   batch_size = 32,
+                                                                   class_mode = "binary")
+
+# Create non-augmented train data batches
+print("Non-augmented training data:")
+train_data = train_datagen.flow_from_directory(train_dir,
+                                               target_size = (224,224),
+                                               class_mode = "binary",
+                                               batch_size = 32)
+
+# Create non-augmented test data batches
+print("Non-augmented test data:")
+test_data = test_datagen.flow_from_directory(test_dir,
+                                             target_size = (224,224),
+                                             batch_size = 32,
+                                             class_mode = "binary")
+
+"""### **Note** Data augmentation should be only done on training data"""
+
+# Get sample augmented data batches
+images , labels =  train_data.next()
+augmented_images , augmented_labels  = train_data_augmented.next()
+
+# Lets view some images
+
+random_number = random.randint(0,31) # 32 batch sizes
+print(f"Showing image number: {random_number}")
+plt.imshow(images[random_number])
+plt.title(f"Original image")
+plt.axis(False)
+plt.figure()
+plt.imshow(augmented_images[random_number])
+plt.title(f"Augmented image")
+plt.axis(False);
+
+"""## 7 Repeat until satisfied 
+Time to train the new model on the augmented data
+"""
+
+# Create a model 
+model_6 = Sequential([
+    Conv2D(10,3,activation="relu"),
+    MaxPool2D(pool_size=2),
+    Conv2D(10,3,activation="relu"),
+    MaxPool2D(),
+    Conv2D(10,3,activation = "relu"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(1,activation="sigmoid")
+])
+
+# Compile model 
+model_6.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics = ["accuracy"])
+
+# Fit the model
+history_6 = model_6.fit(train_data_augmented,
+                        epochs = 5,
+                        steps_per_epoch = len(train_data_augmented),
+                        validation_data = test_data,
+                        validation_steps = len(test_data))
+
+plot_loss_curves(history_6)
 
