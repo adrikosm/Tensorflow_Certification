@@ -480,10 +480,79 @@ model_6.compile(loss = tf.keras.losses.BinaryCrossentropy(),
 
 # Fit the model
 history_6 = model_6.fit(train_data_augmented,
-                        epochs = 5,
+                        epochs = 7,
                         steps_per_epoch = len(train_data_augmented),
                         validation_data = test_data,
                         validation_steps = len(test_data))
 
 plot_loss_curves(history_6)
+
+"""Lets try to make a model with an early stopping. As we can see from the above plots the model could definetly use a little more training time."""
+
+# Create model 
+model_7 = Sequential([
+    Conv2D(10,3,activation ="relu",input_shape = (224,224,3)),
+    MaxPool2D(pool_size = 2),
+    Conv2D(10,3,activation = "relu"),
+    MaxPool2D(),
+    Conv2D(10,3,activation = "relu"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(1,activation="sigmoid")
+])
+
+# Compile the model
+model_7.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics = ["accuracy"])
+
+# Setup early callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience = 3)
+
+# Finnaly fit the model
+history_7 = model_7.fit(train_data_augmented,
+                        epochs = 30,
+                        steps_per_epoch = len(train_data_augmented),
+                        validation_data = test_data,
+                        validation_steps = len(test_data),
+                        callbacks = [callback])
+
+plot_loss_curves(history_7)
+
+"""Lets create a Cnn model with a lot more filters on each layer. Additionaly put a kernel regularizer on the first 2 Conv2d layers."""
+
+from tensorflow.keras import layers
+from tensorflow.keras import regularizers
+
+# Create model
+model_8 = Sequential([
+    Conv2D(64,(3,3),kernel_regularizer=tf.keras.regularizers.l1(0.01),activation="relu",input_shape = (224,224,3)),
+    MaxPool2D(pool_size = 2),
+    Conv2D(32,(3,3),kernel_regularizer=tf.keras.regularizers.l1_l2(l1=1e-5, l2=1e-4),activation="relu"),
+    MaxPool2D(),
+    Conv2D(16,(3,3),activation="relu"),
+    MaxPool2D(),
+    Conv2D(10,3,activation="relu"),
+    MaxPool2D(),
+    Flatten(),
+    Dense(1,activation="sigmoid")
+])
+
+# Compile the model
+model_8.compile(loss = tf.keras.losses.BinaryCrossentropy(),
+                optimizer = tf.keras.optimizers.Adam(),
+                metrics = ["accuracy"])
+
+# Set up callback
+callback = tf.keras.callbacks.EarlyStopping(monitor="accuracy",patience = 5)
+
+# Fit the model on the augmented data
+history_8 = model_8.fit(train_data_augmented,
+                        epochs = 50,
+                        steps_per_epoch = len(train_data_augmented),
+                        validation_data = test_data,
+                        validation_steps = len(test_data),
+                        callbacks = [callback])
+
+plot_loss_curves(history_8)
 
