@@ -27,6 +27,8 @@ import matplotlib.pyplot as plt
 
 
 import tensorflow as tf
+import tensorflow_hub as hub
+from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
@@ -106,8 +108,6 @@ BATCH_SIZE = 32
 EPOCHS = 5
 
 
-
-
 # Setup data
 train_dir = "10_food_classes_10_percent/train/"
 test_dir = "10_food_classes_10_percent/test/"
@@ -137,11 +137,94 @@ Call can be used for
 # Create tensorboard callback 
 # We wil make it into a function in order to use it for multiple models
 
-def create_tensorboard_callback(dir_name,experiment_name):
-  """
-  """
-  log_dir = dir_name + "/" + experiment_name + "/" + datetime.datetime.now.strftime("%Y%m%d-%H%M%S")
-  tensorboard_callback = tf.keras.callbacks.TensorBoard
-  print(f"Saving Tensorboard log files to : {log_dir}")
+def create_tensorboard_callback(dir_name, experiment_name):
+  log_dir = dir_name + "/" + experiment_name + "/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+  tensorboard_callback = tf.keras.callbacks.TensorBoard(
+      log_dir=log_dir
+  )
+  print(f"Saving TensorBoard log files to: {log_dir}")
   return tensorboard_callback
 
+"""## Creating the model using tensorflow hub
+We are going to use and compare 2 models
+
+"""
+
+resnet_url = "https://tfhub.dev/google/imagenet/resnet_v2_50/feature_vector/4"
+
+efficient_url = "https://tfhub.dev/tensorflow/efficientnet/b0/feature-vector/1"
+
+# Lets make a function to create a model from a url
+def create_model(model_url,num_classes=10):
+  """
+  Creates a keras model from a tfhub url
+  Also gets number of classes needed ,default = 10
+  
+  Retruns:
+    An uncompiled Keras sequential model with model_ulr as feature extractor layer
+    and Dense output layer with num classes output neurons
+  """
+  # Download the pretained model and save it as a kera layers
+  feature_extractor_layer = hub.KerasLayer(model_url,
+                                           trainable = False,
+                                           name = "feature_extraction_layer",
+                                           input_shape = IMAGE_SHAPE+(3,))
+  
+  # Create our own model
+  model = tf.keras.Sequential([
+    feature_extractor_layer,
+    layers.Dense(num_classes,activation="softmax",name="Output_layer")
+  ])
+
+
+  return model
+
+# Create resnet model
+resnet_model = create_model(model_url = resnet_url)
+
+resnet_model.summary()
+
+# Compile
+resnet_model.compile(loss='categorical_crossentropy',
+                     optimizer=tf.keras.optimizers.Adam(),
+                     metrics=['accuracy'])
+
+# Commented out IPython magic to ensure Python compatibility.
+# %%timeit
+# # Lets fit the model to the data
+# resenet_history = resnet_model.fit(train_data_10_percent,
+#                                    epochs = EPOCHS,
+#                                    steps_per_epoch = len(train_data_10_percent),
+#                                    validation_data = test_data_10_percent,
+#                                    validation_steps = len(test_data_10_percent),
+#                                    callbacks = [create_tensorboard_callback(dir_name = "tensorflow_hub",
+#                                                                             experiment_name = "resnet50v2 ")])
+
+def plot_loss_curves(history):
+  """
+  Plots out separate loss curves for training and validation data
+  """
+  loss = history.history["loss"]
+  val_loss = history.history["val_loss"]
+
+  accuracy = history.history["accuracy"]
+  val_accuracy = history.history["val_accuracy"]
+
+  epochs = range(len(history.history["loss"]))
+
+  # Plot the loss
+  plt.plot(epochs,loss,label="training loss")
+  plt.plot(epochs,val_loss,label= "validation loss")
+  plt.title("Loss")
+  plt.xlabel("Epochs")
+  plt.legend()
+
+  # Plot out the accuracy
+  plt.figure()
+  plt.plot(epochs,accuracy,label="Training accuracy")
+  plt.plot(epochs,val_accuracy,label="Validation accuracy")
+  plt.title("Accuracy")
+  plt.xlabel("Epochs")
+  plt.legend();
+
+plot_loss_curves(resenet_history)
