@@ -138,7 +138,7 @@ Call can be used for
 # We wil make it into a function in order to use it for multiple models
 
 def create_tensorboard_callback(dir_name, experiment_name):
-  log_dir = dir_name + "/" + experiment_name + "/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+  log_dir = dir_name + "/" + experiment_name + "/" + datetime.datetime.now().strftime("%d-%m-%Y|%H:%M")
   tensorboard_callback = tf.keras.callbacks.TensorBoard(
       log_dir=log_dir
   )
@@ -179,26 +179,23 @@ def create_model(model_url,num_classes=10):
 
   return model
 
-# Create resnet model
-resnet_model = create_model(model_url = resnet_url)
-
-resnet_model.summary()
+# Create model
+resnet_model = create_model(resnet_url)
 
 # Compile
 resnet_model.compile(loss='categorical_crossentropy',
                      optimizer=tf.keras.optimizers.Adam(),
                      metrics=['accuracy'])
 
-# Commented out IPython magic to ensure Python compatibility.
-# %%timeit
-# # Lets fit the model to the data
-# resenet_history = resnet_model.fit(train_data_10_percent,
-#                                    epochs = EPOCHS,
-#                                    steps_per_epoch = len(train_data_10_percent),
-#                                    validation_data = test_data_10_percent,
-#                                    validation_steps = len(test_data_10_percent),
-#                                    callbacks = [create_tensorboard_callback(dir_name = "tensorflow_hub",
-#                                                                             experiment_name = "resnet50v2 ")])
+# Lets fit the model to the data
+resnet_history = resnet_model.fit(train_data_10_percent,
+                                  epochs=5,
+                                  steps_per_epoch=len(train_data_10_percent),
+                                  validation_data=test_data_10_percent,
+                                  validation_steps=len(test_data_10_percent),
+                                  # Add TensorBoard callback to model (callbacks parameter takes a list)
+                                  callbacks=[create_tensorboard_callback(dir_name="tensorflow_hub", # save experiment logs here
+                                                                         experiment_name="resnet50V2")]) # name of log files
 
 def plot_loss_curves(history):
   """
@@ -227,4 +224,31 @@ def plot_loss_curves(history):
   plt.xlabel("Epochs")
   plt.legend();
 
-plot_loss_curves(resenet_history)
+plot_loss_curves(resnet_history)
+
+"""## Time to try again this time with the efficient net b0 feature extraction model"""
+
+# Create and compile model
+efficientnet_model = create_model(efficient_url)
+
+
+efficientnet_model.compile(loss='categorical_crossentropy',
+                     optimizer=tf.keras.optimizers.Adam(),
+                     metrics=['accuracy'])
+
+# Lets fit the model to the data
+efficient_history = efficientnet_model.fit(train_data_10_percent,
+                                  epochs=5,
+                                  steps_per_epoch=len(train_data_10_percent),
+                                  validation_data=test_data_10_percent,
+                                  validation_steps=len(test_data_10_percent),
+                                  # Add TensorBoard callback to model (callbacks parameter takes a list)
+                                  callbacks=[create_tensorboard_callback(dir_name="tensorflow_hub", # save experiment logs here
+                                                                         experiment_name="efficientnet")]) # name of log files
+
+plot_loss_curves(efficient_history)
+
+efficientnet_model.summary()
+
+resnet_model.summary()
+
