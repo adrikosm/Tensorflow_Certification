@@ -244,11 +244,32 @@ efficient_history = efficientnet_model.fit(train_data_10_percent,
                                   validation_steps=len(test_data_10_percent),
                                   # Add TensorBoard callback to model (callbacks parameter takes a list)
                                   callbacks=[create_tensorboard_callback(dir_name="tensorflow_hub", # save experiment logs here
-                                                                         experiment_name="efficientnet")]) # name of log files
+                                                                         experiment_name="efficientnetb0")]) # name of log files
 
 plot_loss_curves(efficient_history)
 
 efficientnet_model.summary()
 
 resnet_model.summary()
+
+"""## There are different types of transfer learning
+* `As is`: learning using an existing model with no changes
+* `Feature extraction`: use the prelearned patterns of an existing model and adjusting the output layer for our own problem
+* `Fine tuning` : Use the prelearned patterns of an existing model and fine tuning many or all of the underlying layers including new output layers.
+
+## Comparing our models using Tensorboard
+"""
+
+# Upload tensorboard dev records
+ !tensorboard dev upload --logdir ./tensorflow_hub/ \
+  --name "EfficientNetB0 vs ResNet50V2" \
+  --description "Comparing two different Tensorflow hub models on 10 percent of 10 food classes" \
+  --one_shot
+
+"""### Public link of tensorflow hub uploaded models: https://tensorboard.dev/experiment/UKGs49o8QlWekmW6OLT3ug/"""
+
+!tensorboard dev list
+
+# How to delete an experiment
+# !tensorboard dev delete --experiment_id XXXXXXXXXXXX ## Experiment ID
 
