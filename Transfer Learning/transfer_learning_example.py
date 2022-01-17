@@ -20,7 +20,7 @@ import tensorflow as tf
 import tensorflow_hub as hub
 from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
+ 
 
 import pathlib
 import zipfile
@@ -171,3 +171,55 @@ efficient_history = efficientnet_model.fit(train_data,
 plot_loss_curves(efficient_history)
 
 efficientnet_model.summary()
+
+"""## Time to test our model on some new unseen data
+
+First lets create some functions to help us out
+"""
+
+def load_and_prep_image(filename,image_shape = 512,scale = True):
+  """
+  Reads an image from a filename and turns it into a tensor 
+  Reshapes the image into 224 by default
+  Rescales the image into 0 and 1 by default
+  """
+  # Read the image 
+  img = tf.io.read_file(filename)
+  # Decode it into a tensor
+  img = tf.image.decode_jpeg(img)
+  # Resize the image
+  img = tf.image.resize(img , [image_shape,image_shape])
+  img = img/255.
+  return img
+
+def pred_and_plot(model,file_path,class_names):
+  """
+  Predicts and plots customs images from a directory
+  """
+  # Setup figure size
+  plt.figure(figsize=(20,20))
+  # Get all the filenames under the file path
+  filenames = os.listdir(file_path)
+
+  # Get the image from the file path
+  for i in range(len(filenames)):
+    img = load_and_prep_image(file_path + "/" + filenames[i])
+    # Make a prediction using the model on the img
+    pred = model.predict(tf.expand_dims(img,axis=0))
+      
+    # Get the predicted class
+    if len(pred[0] > 1): # Check for multi class labels
+      pred_class = class_names[pred.argmax()] # If more than 2 labels take the max
+    else:
+      pred_class = class_names[int(tf.round(pred[0][0]))] # If only one output round them
+
+    # Plot out the image
+    plt.subplot(5,5,i + 1)
+    plt.imshow(img)
+    plt.title(f"Prediction: \n {pred_class}")
+    plt.axis("off")
+
+pred_and_plot(model = efficientnet_model,
+              file_path = '/content/drive/MyDrive/machine_learning/natural_images',
+              class_names = class_names)
+
